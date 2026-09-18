@@ -22,7 +22,7 @@ export default class Start extends Phaser.Scene {
             gameId: gameId,
             qualtricsId: qualtricsId,
             condition: 'sufficiency',
-            gameVersion: 'sufficiency_english_gini_preferences_v2',
+            gameVersion: 'sufficiency_english_gini_preferences_v3',
             gameStartTime: new Date().toISOString(),
             gameEndTime: null,
             totalDurationMs: null,
@@ -34,6 +34,8 @@ export default class Start extends Phaser.Scene {
             survivalCheck: null,
             totalFoodEstimate: null,
             perCapitaEstimate: null,
+            equalDivisionOutcomeChoice: null,
+            equalDivisionOutcomePassed: null,
             totalFoodCountIndividualMoves: 0,
             totalFoodCountPersonDumps: 0,
             equalDivisionIndividualMoves: 0,
@@ -67,6 +69,8 @@ export default class Start extends Phaser.Scene {
             freeAllocationTotalMoved: null,
             freeAllocationDurationMs: null,
             redistributionFeasibility: null,
+            manipulationCheckChoice: null,
+            manipulationCheckPassed: null,
             groupDistributionPreference: null,
             partialRedistributionPreference: null,
             distributivePrinciplePriority: null,
@@ -1066,7 +1070,7 @@ export default class Start extends Phaser.Scene {
         this.createAnswerButton(640, 460, answers[1], 'totalFoodEstimate');
         this.createAnswerButton(640, 560, answers[2], 'totalFoodEstimate');
     }
-    showEqualDivisionTask() {
+    showEqualDivisionTask(restoreOriginal = false) {
         this.clearQuestionScreen();
         const fixedFood = this.getFixedFoodCounts();
         const totalFood = fixedFood.total;
@@ -1109,6 +1113,27 @@ export default class Start extends Phaser.Scene {
         this.addQuestionObject(this.createStaticHumanAvatar(640, baselineY, 'Person B', 1, 3368652, 0));
         this.addQuestionObject(this.createStaticHumanAvatar(1020, baselineY, 'Person C', 0.9, 3381606, 0));
         this.createEqualDivisionFoodPieces(totalFood);
+        if (restoreOriginal) {
+            const counts = [fixedFood.personA, fixedFood.personB, fixedFood.personC];
+            const scales = [1.05, 1, 0.9];
+            const centers = [260, 640, 1020];
+            let foodIndex = 0;
+            roleLabels.forEach((role, index) => {
+                const scale = scales[index];
+                for (let pile = 0; pile < counts[index]; pile++) {
+                    const food = this.equalDivisionFoods[foodIndex++];
+                    food.assignedPerson = role;
+                    food.x = centers[index] + 39 * scale + (pile % 3 - 1) * 15 * scale;
+                    food.y = baselineY + 31 * scale - 6 * scale + Math.floor(pile / 3) * 13 * scale;
+                    food.setDepth(20);
+                }
+                this.equalDivisionCounts[role] = counts[index];
+            });
+            this.equalDivisionAssignedCount = totalFood;
+        }
+        this.createSelfInterestActionButton(105, 675, 150, 'Reset', () => {
+            this.showEqualDivisionTask(true);
+        }, 14540253, '#000000');
         this.equalDivisionBlanket.on('pointerdown', () => {
             if (this.equalDivisionCompleted) {
                 return;
@@ -1254,19 +1279,19 @@ export default class Start extends Phaser.Scene {
     showPerCapitaQuestion() {
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 900, 450, 16777215)).setStrokeStyle(4, 0);
-        this.addQuestionObject(this.add.text(230, 170, 'If the three members of the group equally divide between them the total pieces of food they collected today, how many pieces will each person get?', {
+        this.addQuestionObject(this.add.text(230, 170, 'After dividing the food equally, how many people had at least 5 pieces?', {
             fontSize: '28px',
             color: '#000000',
             align: 'center',
             wordWrap: { width: 820 }
         }));
         const answers = [
-            'More than 5 pieces of food each',
-            'Exactly 5 pieces of food each',
-            'Less than 5 pieces of food each'
+            '0 people',
+            '2 people',
+            '3 people'
         ];
         if (Phaser.Math.Between(0, 1) === 1) answers.reverse();
-        answers.forEach((label, index) => this.createAnswerButton(640, 365 + index * 80, label, 'perCapitaEstimate'));
+        answers.forEach((label, index) => this.createAnswerButton(640, 365 + index * 80, label, 'equalDivisionOutcomeChoice'));
 
         ;
     }
@@ -1417,6 +1442,9 @@ export default class Start extends Phaser.Scene {
                 this.addQuestionObject(food);
             }
         });
+        this.createSelfInterestActionButton(105, 675, 150, 'Reset', () => {
+            this.showPartialRedistributionTask();
+        }, 14540253, '#000000');
         const redistributionButton = this.add.rectangle(640, 675, 560, 64, 0);
         redistributionButton.setStrokeStyle(3, 0);
         redistributionButton.setInteractive({ useHandCursor: true });
@@ -1565,7 +1593,7 @@ export default class Start extends Phaser.Scene {
                 if (!this.personalRedistributionNextShown) {
                     this.personalRedistributionNextShown = true;
                     this.createNextButton(640, 675, 'Next', () => {
-                        this.showPersonalVsGroupResponsibilityQuestion();
+                        this.showDistributivePrincipleQuestion();
                     });
                 }
             } else {
@@ -2388,7 +2416,7 @@ export default class Start extends Phaser.Scene {
             } else {
                 this.storeSelfInterestAllocation();
                 this.allocationStage = 'submitted';
-                this.showFinalGameScreen();
+                this.showManipulationCheck();
             }
         });
 
@@ -2643,6 +2671,10 @@ export default class Start extends Phaser.Scene {
                 freeAllocationTotalMoved: this.gameData.freeAllocationTotalMoved,
                 freeAllocationDurationMs: this.gameData.freeAllocationDurationMs,
                 redistributionFeasibility: this.gameData.redistributionFeasibility,
+                equalDivisionOutcomeChoice: this.gameData.equalDivisionOutcomeChoice,
+                equalDivisionOutcomePassed: this.gameData.equalDivisionOutcomePassed,
+                manipulationCheckChoice: this.gameData.manipulationCheckChoice,
+                manipulationCheckPassed: this.gameData.manipulationCheckPassed,
                 condition: this.gameData.condition,
                 gameVersion: this.gameData.gameVersion,
                 respondentDecile: this.gameData.respondentDecile,
@@ -2770,7 +2802,9 @@ export default class Start extends Phaser.Scene {
             };
             if (variableName === 'totalFoodEstimate') {
                 addNext(() => this.showFoodPolicyTransition('Task 1', 'First, choose how to arrange the food among the members of the group.', () => this.startSelfInterestAllocation('initial')));
-            } else if (variableName === 'perCapitaEstimate') {
+             } else if (variableName === 'equalDivisionOutcomeChoice') {
+                this.gameData.equalDivisionOutcomeChoice = Number.parseInt(label, 10);
+                this.gameData.equalDivisionOutcomePassed = this.gameData.equalDivisionOutcomeChoice === (this.gameData.condition === 'sufficiency' ? 3 : 0);
                 addNext(() => {
                     this.showGroupDistributionPreferenceQuestion();
                 });
@@ -2778,12 +2812,17 @@ export default class Start extends Phaser.Scene {
                 addNext(() => this.showFoodPolicyTransition('Task 3', 'Third, see what happens when you move food from people with more than 5 pieces of food to members of the group with less.', () => this.showPartialRedistributionTask()));
             } else if (variableName === 'partialRedistributionPreference') {
                 addNext(() => {
-                    this.showDistributivePrincipleQuestion();
+                    this.showRedistributionFeasibility();
                 });
             } else if (variableName === 'distributivePrinciplePriority') {
                 addNext(() => {
-                    this.showRedistributionFeasibility();
+                    this.showPersonalVsGroupResponsibilityQuestion();
                 });
+            } else if (variableName === 'manipulationCheckChoice') {
+                this.gameData.manipulationCheckChoice = { Yes: 'yes', No: 'no', 'Not sure': 'not_sure' }[label];
+                this.gameData.manipulationCheckPassed = this.gameData.manipulationCheckChoice ===
+                    (this.gameData.condition === 'sufficiency' ? 'yes' : 'no');
+                addNext(() => this.showFinalGameScreen());
             } else if (variableName === 'redistributionFeasibility') {
                 addNext(() => this.showSocialContractQuestion());
             } else if (variableName === 'socialContractGuarantee') {
@@ -2965,13 +3004,24 @@ export default class Start extends Phaser.Scene {
         this.gameData.freeAllocationTotalMoved = values.reduce((sum,n,i) => sum + Math.abs(n-initial[i]),0)/2;
         this.gameData.freeAllocationDurationMs = Date.now() - this.allocationStartedAt;
     }
-    showRedistributionFeasibility() {
+    showManipulationCheck() {
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 1120, 600, 16777215).setStrokeStyle(3, 0));
-        this.addQuestionObject(this.add.text(640, 200, 'Could the available food be distributed so that all three people have at least five pieces each?', {fontSize: '29px', color: '#000000', align: 'center', wordWrap: {width: 960}}).setOrigin(0.5));
+        this.addQuestionObject(this.add.text(640, 200,
+            'Was there enough food in total for all three people to have at least 5 pieces each?',
+            {fontSize: '29px', color: '#000000', align: 'center', wordWrap: {width: 960}}
+        ).setOrigin(0.5));
         const answers = ['Yes', 'No'];
         if (Phaser.Math.Between(0, 1) === 1) answers.reverse();
         answers.push('Not sure');
+        answers.forEach((label, i) => this.createAnswerButton(640, 350 + i * 90, label, 'manipulationCheckChoice'));
+    }
+    showRedistributionFeasibility() {
+        this.clearQuestionScreen();
+        this.addQuestionObject(this.add.rectangle(640, 360, 1120, 600, 16777215).setStrokeStyle(3, 0));
+        this.addQuestionObject(this.add.text(640, 200, 'Could the food be distributed so everyone has at least 5 pieces?', {fontSize: '29px', color: '#000000', align: 'center', wordWrap: {width: 960}}).setOrigin(0.5));
+        const answers = ['Yes', 'No'];
+        if (Phaser.Math.Between(0, 1) === 1) answers.reverse();
         answers.forEach((label,i) => this.createAnswerButton(640, 350+i*90, label, 'redistributionFeasibility'));
 
         ;
