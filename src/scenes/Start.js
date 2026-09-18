@@ -1622,7 +1622,7 @@ export default class Start extends Phaser.Scene {
                 if (!this.personalRedistributionNextShown) {
                     this.personalRedistributionNextShown = true;
                     this.createNextButton(640, 675, 'Next', () => {
-                        this.showPersonalVsGroupResponsibilityQuestion();
+                        this.showEconomicPrinciple();
                     });
                 }
             } else {
@@ -1748,6 +1748,29 @@ export default class Start extends Phaser.Scene {
         this.createAnswerButton(640, 535, answers[1], 'socialContractGuarantee');
 
         ;
+    }
+    showEconomicPrinciple(index = 0) {
+        if (!this.gameData.economicPrincipleOrder) {
+            this.gameData.economicPrincipleOrder = Phaser.Utils.Array.Shuffle([
+                'personalVsGroupResponsibility', 'fairRuleChoice', 'foodPriorityChoice',
+                'workBreakChoice', 'floodPreparationChoice', 'personDShareChoice',
+                'personDEmpathyChoice', 'cooperationCompetitionChoice'
+            ]);
+        }
+        this.economicPrincipleIndex = index;
+        const screens = {
+            personalVsGroupResponsibility: () => this.showPersonalVsGroupResponsibilityQuestion(),
+            fairRuleChoice: () => this.showFairRuleQuestion(),
+            foodPriorityChoice: () => this.showFoodRankReminderScreen(),
+            workBreakChoice: () => this.showHardWorkReminderScreen(),
+            floodPreparationChoice: () => this.showFloodRiskInstructionScreen(),
+            personDShareChoice: () => this.showPersonDInstructionScreen(() => this.showPersonDShareQuestion()),
+            personDEmpathyChoice: () => this.showPersonDInstructionScreen(() => this.showPersonDEmpathyQuestion()),
+            cooperationCompetitionChoice: () => this.showCooperationCompetitionInstructionScreen()
+        };
+        const key = this.gameData.economicPrincipleOrder[index];
+        if (!key) { this.showSelfInterestRandomizationScreen(); return; }
+        screens[key]();
     }
     showPersonalVsGroupResponsibilityQuestion() {
         this.clearQuestionScreen();
@@ -2053,7 +2076,7 @@ export default class Start extends Phaser.Scene {
 
         ;
     }
-    showPersonDInstructionScreen() {
+    showPersonDInstructionScreen(nextQuestion = () => this.showPersonDShareQuestion()) {
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 1120, 560, 16777215)).setStrokeStyle(4, 0);
         this.addQuestionObject(this.add.text(640, 165, 'A new person (Person D) wanders into the group\u2019s location and begs for food. The new person is peaceful and not threatening.', {
@@ -2069,7 +2092,7 @@ export default class Start extends Phaser.Scene {
         this.addQuestionObject(this.createStaticHumanAvatar(535, 390, 'Person C', 0.66, 3381606, 0, false));
         this.addQuestionObject(this.createPersonDOutstretchedAvatar(1050, 355, 'Person D', 0.66, 9067076));
         this.createNextButton(640, 675, 'Next', () => {
-            this.showPersonDShareQuestion();
+            nextQuestion();
         });
     }
     showPersonDShareQuestion() {
@@ -2675,6 +2698,7 @@ export default class Start extends Phaser.Scene {
             qualtricsId: this.gameData.qualtricsId,
             saveStatus: saveStatus,
             summary: {
+                economicPrincipleOrder: this.gameData.economicPrincipleOrder,
                 redistributionTaskOrder: this.gameData.redistributionTaskOrder,
                 redistributionBlocksCompleted: this.gameData.redistributionBlocksCompleted,
                 freeAllocationFinal: this.gameData.freeAllocationFinal,
@@ -2837,38 +2861,8 @@ export default class Start extends Phaser.Scene {
                 addNext(() => {
                     this.showSurvivalRedistributionQuestion();
                 });
-            } else if (variableName === 'personalVsGroupResponsibility') {
-                addNext(() => {
-                    this.showFairRuleQuestion();
-                });
-            } else if (variableName === 'fairRuleChoice') {
-                addNext(() => {
-                    this.showFoodRankReminderScreen();
-                });
-            } else if (variableName === 'foodPriorityChoice') {
-                addNext(() => {
-                    this.showHardWorkReminderScreen();
-                });
-            } else if (variableName === 'workBreakChoice') {
-                addNext(() => {
-                    this.showFloodRiskInstructionScreen();
-                });
-            } else if (variableName === 'floodPreparationChoice') {
-                addNext(() => {
-                    this.showPersonDInstructionScreen();
-                });
-            } else if (variableName === 'personDShareChoice') {
-                addNext(() => {
-                    this.showPersonDEmpathyQuestion();
-                });
-            } else if (variableName === 'personDEmpathyChoice') {
-                addNext(() => {
-                    this.showCooperationCompetitionInstructionScreen();
-                });
-            } else if (variableName === 'cooperationCompetitionChoice') {
-                addNext(() => {
-                    this.showSelfInterestRandomizationScreen();
-                });
+            } else if (this.gameData.economicPrincipleOrder?.includes(variableName)) {
+                addNext(() => this.showEconomicPrinciple(this.economicPrincipleIndex + 1));
             }
         });
     }
