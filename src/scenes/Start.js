@@ -22,7 +22,7 @@ export default class Start extends Phaser.Scene {
             gameId: gameId,
             qualtricsId: qualtricsId,
             condition: 'sufficiency',
-            gameVersion: 'sufficiency_english_gini',
+            gameVersion: 'sufficiency_english_gini_preferences_v2',
             gameStartTime: new Date().toISOString(),
             gameEndTime: null,
             totalDurationMs: null,
@@ -61,6 +61,12 @@ export default class Start extends Phaser.Scene {
                 equalRedistribution: false,
                 partialRedistribution: false
             },
+            freeAllocationFinal: null,
+            freeAllocationGini: null,
+            freeAllocationSurvivors: null,
+            freeAllocationTotalMoved: null,
+            freeAllocationDurationMs: null,
+            redistributionFeasibility: null,
             groupDistributionPreference: null,
             partialRedistributionPreference: null,
             distributivePrinciplePriority: null,
@@ -123,12 +129,12 @@ export default class Start extends Phaser.Scene {
         this.selfInterestPartialApplied = false;
         this.selfInterestAllocationSource = 'starting_distribution';
         this.instructionScreens = [
-            'Welcome to the survival game. In this game, a group of three people find themselves lost in an otherwise uninhabited location.',
-            'The people have been hunting and gathering food in order to survive. \n \nIf a person does not eat at least 5 pieces of food a day, he will die. \n \nIf a person collects more than 5 pieces of food a day, he can save the remainder for himself the next day.',
+            'Welcome to the Survival Task. In this task, a group of three people find themselves lost in an otherwise uninhabited location.',
+            'The people have been hunting and gathering food in order to survive. \n \nIf a person does not eat at least 5 pieces of food a day, he will not survive. \n \nIf a person collects more than 5 pieces of food a day, he can save the remainder for himself the next day.',
             'The location is rich in natural resources, and the group can always collect enough food for everyone to survive.',
-            'Person A always collects the most pieces of food per day. \n \nPerson B always collects the median pieces of food per day. \n \nPerson C always collects the least pieces of food per day.',
+            'Person A usually collects the most pieces of food per day. \n \nPerson B usually collects less than Person A but more than Person C. \n \nPerson C usually collects the least pieces of food per day.',
             'Today, Person A collected 9 pieces of food, Person B collected 6 pieces of food, and Person C collected 3 pieces of food.',
-            'Your job is to make decisions on behalf of the group that maximize the survival of the most members of the group. \n \nThe more members of the group you keep alive until the end of the game, the better you will do in the game.'
+            'You will make decisions about how the group distributes its food. Choose what you think is best for the group. Use only the food shown.'
         ];
         if (this.isMobileDevice()) {
             this.showRotatePhoneScreen(() => {
@@ -347,9 +353,11 @@ export default class Start extends Phaser.Scene {
             align: 'center',
             wordWrap: { width: 780 }
         }));
-        this.createSurvivalCheckButton(640, 340, '3 pieces', false);
-        this.createSurvivalCheckButton(640, 420, '5 pieces', true);
-        this.createSurvivalCheckButton(640, 500, '7 pieces', false);
+        const choices = [3, 5, 7];
+        if (Phaser.Math.Between(0, 1) === 1) choices.reverse();
+        choices.forEach((amount, index) => this.createSurvivalCheckButton(640, 340 + index * 80, amount + ' pieces', amount === 5));
+
+        this.addInstructionReview('', 150, () => { this.instructionIndex = 0; this.showInstructionScreen(); });
     }
     createSurvivalCheckButton(centerX, centerY, label, isCorrect) {
         const paddingX = 24;
@@ -1154,6 +1162,8 @@ export default class Start extends Phaser.Scene {
                 });
             }
         });
+
+        ;
     }
     createEqualDivisionFoodPieces(totalFood) {
         const positions = [
@@ -1250,9 +1260,15 @@ export default class Start extends Phaser.Scene {
             align: 'center',
             wordWrap: { width: 820 }
         }));
-        this.createAnswerButton(640, 365, 'More than 5 pieces of food each', 'perCapitaEstimate');
-        this.createAnswerButton(640, 445, 'Exactly 5 pieces of food each', 'perCapitaEstimate');
-        this.createAnswerButton(640, 525, 'Less than 5 pieces of food each', 'perCapitaEstimate');
+        const answers = [
+            'More than 5 pieces of food each',
+            'Exactly 5 pieces of food each',
+            'Less than 5 pieces of food each'
+        ];
+        if (Phaser.Math.Between(0, 1) === 1) answers.reverse();
+        answers.forEach((label, index) => this.createAnswerButton(640, 365 + index * 80, label, 'perCapitaEstimate'));
+
+        ;
     }
     showGroupDistributionPreferenceQuestion() {
         this.clearQuestionScreen();
@@ -1274,6 +1290,8 @@ export default class Start extends Phaser.Scene {
         ]);
         this.createAnswerButton(640, 470, answers[0], 'groupDistributionPreference');
         this.createAnswerButton(640, 575, answers[1], 'groupDistributionPreference');
+
+        ;
     }
     createStaticHumanAvatar(x, y, label, scale, shirtColor, foodAmount = 0, showBasket = true) {
         const person = this.add.container(x, y);
@@ -1355,7 +1373,7 @@ export default class Start extends Phaser.Scene {
         };
         this.partialRedistributionCompleted = false;
         this.partialRedistributionNextShown = false;
-        this.partialRedistributionInstructionText = this.add.text(640, 65, 'Redistribute food above the 5-piece survival threshold so that the greatest possible number of people have enough food to survive.', {
+        this.partialRedistributionInstructionText = this.add.text(640, 65, 'Click the button below to see what happens when people with more than 5 pieces share some of their food.', {
             fontSize: '26px',
             color: '#000000',
             align: 'center',
@@ -1459,6 +1477,8 @@ export default class Start extends Phaser.Scene {
                 });
             }
         });
+
+        ;
     }
     showPartialRedistributionPreferenceQuestion() {
         this.clearQuestionScreen();
@@ -1480,6 +1500,8 @@ export default class Start extends Phaser.Scene {
         ]);
         this.createAnswerButton(640, 480, answers[0], 'partialRedistributionPreference');
         this.createAnswerButton(640, 570, answers[1], 'partialRedistributionPreference');
+
+        ;
     }
     showPersonalRedistributionQuestion() {
         this.clearQuestionScreen();
@@ -1489,8 +1511,9 @@ export default class Start extends Phaser.Scene {
             partialRedistribution: false
         };
         this.personalRedistributionNextShown = false;
+        this.personalRedistributionChecks = {};
         this.addQuestionObject(this.add.rectangle(640, 360, 1120, 520, 16777215).setStrokeStyle(4, 0));
-        this.addQuestionObject(this.add.text(640, 150, 'Which of the following approaches do you believe are appropriate in this scenario? Select all that apply.', {
+        this.addQuestionObject(this.add.text(640, 150, 'Which approaches do you most support? Select all that apply.', {
             fontSize: '27px',
             color: '#000000',
             align: 'center',
@@ -1514,6 +1537,8 @@ export default class Start extends Phaser.Scene {
         options.forEach((option, index) => {
             this.createPersonalRedistributionCheckboxButton(640, 290 + index * 105, option.label, option.key);
         });
+
+        ;
     }
     createPersonalRedistributionCheckboxButton(centerX, centerY, label, key) {
         const box = this.add.rectangle(centerX - 420, centerY, 34, 34, 16777215);
@@ -1525,6 +1550,7 @@ export default class Start extends Phaser.Scene {
             fontStyle: 'bold'
         }).setOrigin(0.5);
         check.setVisible(false);
+        this.personalRedistributionChecks[key] = check;
         const text = this.add.text(centerX - 375, centerY, label, {
             fontSize: '23px',
             color: '#000000',
@@ -1533,7 +1559,7 @@ export default class Start extends Phaser.Scene {
         text.setInteractive({ useHandCursor: true });
         const toggle = () => {
             this.gameData.personalRedistributionSelected[key] = !this.gameData.personalRedistributionSelected[key];
-            check.setVisible(this.gameData.personalRedistributionSelected[key]);
+            Object.entries(this.personalRedistributionChecks).forEach(([k, mark]) => mark.setVisible(this.gameData.personalRedistributionSelected[k]));
             const anySelected = this.gameData.personalRedistributionSelected.noRedistribution || this.gameData.personalRedistributionSelected.equalRedistribution || this.gameData.personalRedistributionSelected.partialRedistribution;
             if (anySelected) {
                 if (!this.personalRedistributionNextShown) {
@@ -1574,7 +1600,7 @@ export default class Start extends Phaser.Scene {
         this.gameData.redistributionRulesSelected = this.gameData.survivalRedistributionSelected;
         this.survivalRedistributionNextShown = false;
         this.addQuestionObject(this.add.rectangle(640, 360, 1120, 520, 16777215)).setStrokeStyle(4, 0);
-        this.addQuestionObject(this.add.text(640, 160, 'Which of the following approaches would help make sure the greatest number of people survive? Select all that apply.', {
+        this.addQuestionObject(this.add.text(640, 160, 'Which approaches would allow the most people to survive? Select all that apply.', {
             fontSize: '27px',
             color: '#000000',
             align: 'center',
@@ -1598,6 +1624,8 @@ export default class Start extends Phaser.Scene {
         options.forEach((option, index) => {
             this.createCheckboxButton(640, 300 + index * 100, option.label, option.key);
         });
+
+        ;
     }
     createCheckboxButton(centerX, centerY, label, key) {
         const box = this.add.rectangle(centerX - 420, centerY, 34, 34, 16777215);
@@ -1656,16 +1684,18 @@ export default class Start extends Phaser.Scene {
             lineSpacing: 6
         }).setOrigin(0.5));
         const answers = Phaser.Utils.Array.Shuffle([
-            'Making sure the person who collects the most food has enough food to survive.',
-            'Making sure the person who collects the least food has enough food to survive.'
+            'Making sure the person who usually collects the most food has enough food to survive.',
+            'Making sure the person who usually collects the least food has enough food to survive.'
         ]);
         this.createAnswerButton(640, 410, answers[0], 'distributivePrinciplePriority');
         this.createAnswerButton(640, 535, answers[1], 'distributivePrinciplePriority');
+
+        ;
     }
     showSocialContractQuestion() {
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 1120, 500, 16777215)).setStrokeStyle(4, 0);
-        this.addQuestionObject(this.add.text(640, 235, 'In this scenario, should the group form a social contract that guarantees every member has enough food to survive, or should the group not form such a social contract?', {
+        this.addQuestionObject(this.add.text(640, 235, 'Should the group agree to make sure everyone has enough food to survive?', {
             fontSize: '27px',
             color: '#000000',
             align: 'center',
@@ -1673,16 +1703,18 @@ export default class Start extends Phaser.Scene {
             lineSpacing: 6
         }).setOrigin(0.5));
         const answers = Phaser.Utils.Array.Shuffle([
-            'The group should form a social contract that guarantees every member has enough food to survive.',
-            'The group should not form a social contract that guarantees every member has enough food to survive.'
+            'The group should agree to make sure everyone has enough food to survive.',
+            'The group should not agree to make sure everyone has enough food to survive.'
         ]);
         this.createAnswerButton(640, 410, answers[0], 'socialContractGuarantee');
         this.createAnswerButton(640, 535, answers[1], 'socialContractGuarantee');
+
+        ;
     }
     showPersonalVsGroupResponsibilityQuestion() {
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 1120, 500, 16777215)).setStrokeStyle(4, 0);
-        this.addQuestionObject(this.add.text(640, 230, 'For the most people to survive today and in the future, is it more important that each member of the group takes personal responsibility for ensuring he collects enough food for himself to survive or takes responsibility for ensuring all members of the group have enough food to survive?', {
+        this.addQuestionObject(this.add.text(640, 230, 'In this situation, which should receive greater priority: personal responsibility or shared responsibility for meeting food needs?', {
             fontSize: '25px',
             color: '#000000',
             align: 'center',
@@ -1690,16 +1722,18 @@ export default class Start extends Phaser.Scene {
             lineSpacing: 6
         }).setOrigin(0.5));
         const answers = Phaser.Utils.Array.Shuffle([
-            'It is more important each member of the group takes responsibility for ensuring all members of the group have enough food to survive.',
-            'It is more important each member of the group takes personal responsibility for ensuring he collects enough food for himself to survive.'
+            'The group sharing responsibility for meeting everyone’s food needs.',
+            'Each person taking responsibility for meeting their own food needs.'
         ]);
         this.createAnswerButton(640, 430, answers[0], 'personalVsGroupResponsibility');
         this.createAnswerButton(640, 550, answers[1], 'personalVsGroupResponsibility');
+
+        ;
     }
     showFairRuleQuestion() {
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 1120, 500, 16777215)).setStrokeStyle(4, 0);
-        this.addQuestionObject(this.add.text(640, 230, 'Which rule is more fair for this group of people?', {
+        this.addQuestionObject(this.add.text(640, 230, 'Which approach to distributing food would be fairer?', {
             fontSize: '29px',
             color: '#000000',
             align: 'center',
@@ -1707,11 +1741,13 @@ export default class Start extends Phaser.Scene {
             lineSpacing: 6
         }).setOrigin(0.5));
         const answers = Phaser.Utils.Array.Shuffle([
-            'A fair rule would be that all three people must always share their food equitably whenever they hunt and gather more than 5 pieces in a day.',
-            'A fair rule would be that the amount of food each person eats should be proportional to the amount he collects by himself.'
+            'Give extra food to people who need help so they have a better chance to hunt and gather successfully.',
+            'Give people food according to how much they contribute through hunting and gathering.'
         ]);
         this.createAnswerButton(640, 410, answers[0], 'fairRuleChoice');
         this.createAnswerButton(640, 540, answers[1], 'fairRuleChoice');
+
+        ;
     }
     showFoodRankReminderScreen() {
         this.clearQuestionScreen();
@@ -1721,7 +1757,7 @@ export default class Start extends Phaser.Scene {
         this.addQuestionObject(this.createStaticHumanAvatar(280, 185, 'Person A', 1.12, 13382451, fixedFood.personA));
         this.addQuestionObject(this.createStaticHumanAvatar(640, 185, 'Person B', 1, 3368652, fixedFood.personB));
         this.addQuestionObject(this.createStaticHumanAvatar(1000, 185, 'Person C', 0.88, 3381606, fixedFood.personC));
-        this.addQuestionObject(this.add.text(640, 450, 'Remember, Person A always collects the most pieces of food per day. Person B always collects the median pieces of food per day. Person C always collects the least pieces of food per day.', {
+        this.addQuestionObject(this.add.text(640, 450, 'Remember, Person A usually collects the most pieces of food per day. Person B usually collects less than Person A but more than Person C. Person C usually collects the least pieces of food per day.', {
             fontSize: '27px',
             color: '#000000',
             align: 'center',
@@ -1739,7 +1775,7 @@ export default class Start extends Phaser.Scene {
         this.addQuestionObject(this.createStaticHumanAvatar(640, 90, 'Person B', 0.74, 3368652, fixedFood.personB));
         this.addQuestionObject(this.createStaticHumanAvatar(1000, 90, 'Person C', 0.66, 3381606, fixedFood.personC));
         this.addQuestionObject(this.add.rectangle(640, 435, 1120, 390, 16777215)).setStrokeStyle(4, 0);
-        this.addQuestionObject(this.add.text(640, 285, 'Whose food requirements should the group prioritize in order to maximize the number of people who stay alive?', {
+        this.addQuestionObject(this.add.text(640, 285, 'Whose food needs should the group give greater priority?', {
             fontSize: '27px',
             color: '#000000',
             align: 'center',
@@ -1747,11 +1783,13 @@ export default class Start extends Phaser.Scene {
             lineSpacing: 6
         }).setOrigin(0.5));
         const answers = Phaser.Utils.Array.Shuffle([
-            'The group should make sure Person C gets at least 5 pieces of the food collected every day because the other people have more food and because without enough food Person C will die.',
+            'The group should make sure Person C gets at least 5 pieces of the food collected every day because the other people have more food and because without enough food Person C will not survive.',
             'The group should make sure Person A gets at least 5 pieces of the food collected every day because Person A usually is able to share the most food and because Person A is most likely to survive in the long run.'
         ]);
         this.createAnswerButton(640, 400, answers[0], 'foodPriorityChoice');
         this.createAnswerButton(640, 535, answers[1], 'foodPriorityChoice');
+
+        ;
     }
     showHardWorkReminderScreen() {
         this.clearQuestionScreen();
@@ -1787,6 +1825,8 @@ export default class Start extends Phaser.Scene {
         ]);
         this.createAnswerButton(640, 475, answers[0], 'workBreakChoice');
         this.createAnswerButton(640, 570, answers[1], 'workBreakChoice');
+
+        ;
     }
     createTiredHumanAvatar(x, y, label, scale, shirtColor) {
         const person = this.add.container(x, y);
@@ -1972,6 +2012,8 @@ export default class Start extends Phaser.Scene {
         ]);
         this.createAnswerButton(640, 500, answers[0], 'floodPreparationChoice');
         this.createAnswerButton(640, 580, answers[1], 'floodPreparationChoice');
+
+        ;
     }
     showPersonDInstructionScreen() {
         this.clearQuestionScreen();
@@ -2009,6 +2051,8 @@ export default class Start extends Phaser.Scene {
         ]);
         this.createAnswerButton(640, 435, answers[0], 'personDShareChoice');
         this.createAnswerButton(640, 525, answers[1], 'personDShareChoice');
+
+        ;
     }
     createPersonDOutstretchedAvatar(x, y, label, scale, shirtColor) {
         const person = this.add.container(x, y);
@@ -2045,7 +2089,7 @@ export default class Start extends Phaser.Scene {
         this.clearQuestionScreen();
         this.addQuestionObject(this.createPersonDOutstretchedAvatar(640, 125, 'Person D', 0.82, 9067076));
         this.addQuestionObject(this.add.rectangle(640, 450, 1120, 350, 16777215)).setStrokeStyle(4, 0);
-        this.addQuestionObject(this.add.text(640, 325, 'Does the group maximize the number of people who are likely to survive if they feel great empathy for Person D or if they limit their feelings of empathy for Person D?', {
+        this.addQuestionObject(this.add.text(640, 325, 'Should empathy toward Person D guide the group’s decision about whether to give Person D food?', {
             fontSize: '26px',
             color: '#000000',
             align: 'center',
@@ -2053,11 +2097,13 @@ export default class Start extends Phaser.Scene {
             lineSpacing: 6
         }).setOrigin(0.5));
         const answers = Phaser.Utils.Array.Shuffle([
-            'The group maximizes the number of people who are likely to survive if they experience feelings of great empathy for Person D.',
-            'The group maximizes the number of people who are likely to survive if they experience minimal feelings of empathy for Person D.'
+            'Empathy should guide the decision.',
+            'Empathy should not guide the decision.'
         ]);
         this.createAnswerButton(640, 445, answers[0], 'personDEmpathyChoice');
         this.createAnswerButton(640, 540, answers[1], 'personDEmpathyChoice');
+
+        ;
     }
     showCooperationCompetitionInstructionScreen() {
         this.clearQuestionScreen();
@@ -2168,6 +2214,8 @@ export default class Start extends Phaser.Scene {
         ]);
         this.createAnswerButton(640, 455, answers[0], 'cooperationCompetitionChoice');
         this.createAnswerButton(640, 560, answers[1], 'cooperationCompetitionChoice');
+
+        ;
     }
     showSelfInterestRandomizationScreen() {
         if (!this.gameData.respondentRole) {
@@ -2185,43 +2233,15 @@ export default class Start extends Phaser.Scene {
         }
     }
     showNeutralSelfInterestScreen() {
-        this.clearQuestionScreen();
-        this.clearGameObjects();
         this.gameData.respondentRoleRevealed = false;
-        this.addQuestionObject(this.add.rectangle(640, 360, 1120, 610, 16777215).setStrokeStyle(4, 0));
-        this.addQuestionObject(this.add.text(640, 90, 'Next, you will complete one final food-distribution task.', {
-            fontSize: '32px',
-            color: '#000000',
-            align: 'center',
-            wordWrap: { width: 980 }
-        }).setOrigin(0.5));
-        this.drawSelfInterestStartingRoles(null);
-        this.createNextButton(640, 675, 'Continue', () => {
-            this.startSelfInterestAllocation();
-        });
+        this.showFoodPolicyTransition('Task 4', 'Start again with Persons A, B, and C. Choose your final arrangement.', () => this.startSelfInterestAllocation());
     }
     showRespondentRoleScreen() {
-        this.clearQuestionScreen();
-        this.clearGameObjects();
         this.gameData.respondentRoleRevealed = true;
         const respondentRole = this.gameData.respondentRole;
         const fixedFood = this.getFixedFoodCounts();
-        const respondentFood = {
-            'Person A': fixedFood.personA,
-            'Person B': fixedFood.personB,
-            'Person C': fixedFood.personC
-        }[respondentRole];
-        this.addQuestionObject(this.add.rectangle(640, 360, 1120, 610, 16777215).setStrokeStyle(4, 0));
-        this.addQuestionObject(this.add.text(640, 110, `Imagine that you are ${ respondentRole }, who is outlined in green.\nYou have ${ respondentFood } pieces of food.`, {
-            fontSize: '32px',
-            color: '#000000',
-            align: 'center',
-            wordWrap: { width: 980 }
-        }).setOrigin(0.5));
-        this.drawSelfInterestStartingRoles(respondentRole);
-        this.createNextButton(640, 675, 'Continue', () => {
-            this.startSelfInterestAllocation();
-        });
+        const respondentFood = {'Person A': fixedFood.personA, 'Person B': fixedFood.personB, 'Person C': fixedFood.personC}[respondentRole];
+        this.showFoodPolicyTransition('Task 4', `Start again with Persons A, B, and C.\n\nFor this task, imagine you are ${respondentRole}. You have ${respondentFood} pieces of food.`, () => this.startSelfInterestAllocation());
     }
     drawSelfInterestStartingRoles(highlightedRole) {
         const fixedFood = this.getFixedFoodCounts();
@@ -2257,7 +2277,9 @@ export default class Start extends Phaser.Scene {
             this.addQuestionObject(this.createStaticHumanAvatar(role.x, 350, role.label, role.scale, role.shirtColor, fixedFood[role.key]));
         });
     }
-    startSelfInterestAllocation() {
+    startSelfInterestAllocation(stage = 'final') {
+        this.allocationStage = stage;
+        this.allocationStartedAt = Date.now();
         const fixedFood = this.getFixedFoodCounts();
         this.selfInterestCounts = {
             'Person A': fixedFood.personA,
@@ -2273,21 +2295,22 @@ export default class Start extends Phaser.Scene {
         this.clearQuestionScreen();
         this.clearGameObjects();
         const fixedFood = this.getFixedFoodCounts();
-        const revealRole = this.gameData.respondentRoleRevealed ? this.gameData.respondentRole : null;
+        const isInitial = this.allocationStage === 'initial';
+        const revealRole = !isInitial && this.gameData.respondentRoleRevealed ? this.gameData.respondentRole : null;
         this.addQuestionObject(this.add.rectangle(640, 360, 1240, 700, 16777215).setStrokeStyle(3, 0));
-        this.addQuestionObject(this.add.text(640, 24, 'Arrange the food in the way you think is best.', {
+        this.addQuestionObject(this.add.text(640, 24, 'Arrange the food as you think best.', {
             fontSize: '29px',
             color: '#000000',
             align: 'center',
             wordWrap: { width: 1150 }
         }).setOrigin(0.5, 0));
-        this.addQuestionObject(this.add.text(640, 70, `There are ${ fixedFood.total } pieces of food. Each person needs at least 5 pieces to survive. You may move any piece from one person to another.`, {
+        this.addQuestionObject(this.add.text(640, 70, 'Each person needs 5 pieces to survive.', {
             fontSize: '20px',
             color: '#000000',
             align: 'center',
             wordWrap: { width: 1120 }
         }).setOrigin(0.5, 0));
-        const statusLine = revealRole ? `You are ${ revealRole }, which is outlined in green.` : 'The total amount of food is fixed; no additional food can be collected.';
+        const statusLine = revealRole ? `You are ${ revealRole } (outlined in green).` : '';
         this.addQuestionObject(this.add.text(640, 125, statusLine, {
             fontSize: '17px',
             color: revealRole ? '#1b6f3a' : '#555555',
@@ -2316,6 +2339,8 @@ export default class Start extends Phaser.Scene {
         ];
         this.selfInterestBaselineY = 330;
         this.selfInterestDropZones = {};
+        this.selectedSelfInterestFood = null;
+        this.input.dragDistanceThreshold = 6;
         this.selfInterestCountTexts = {};
         roles.forEach(role => {
             if (role.label === revealRole) {
@@ -2325,6 +2350,10 @@ export default class Start extends Phaser.Scene {
             }
             this.addQuestionObject(this.createStaticHumanAvatar(role.x, this.selfInterestBaselineY, role.label, role.scale, role.shirtColor, 0));
             const dropZone = this.add.zone(role.x, 365, 240, 330).setRectangleDropZone(240, 330);
+            dropZone.setInteractive({useHandCursor: true});
+            dropZone.on('pointerup', () => {
+                if (this.selectedSelfInterestFood && !this.selectedSelfInterestFood.wasDragged) this.moveSelfInterestFood(this.selectedSelfInterestFood, role.label);
+            });
             this.selfInterestDropZones[role.label] = dropZone;
             this.addQuestionObject(dropZone);
             const countText = this.add.text(role.x, 510, '', {
@@ -2341,6 +2370,7 @@ export default class Start extends Phaser.Scene {
             wordWrap: { width: 1050 }
         }).setOrigin(0.5);
         this.addQuestionObject(this.selfInterestSummaryText);
+        this.selfInterestSummaryText.setText('You may drag the food to another person or leave it as it is.');
         this.createSelfInterestFoodPieces();
         this.createSelfInterestActionButton(105, 675, 150, 'Reset', () => {
             this.applySelfInterestAllocation([
@@ -2349,21 +2379,20 @@ export default class Start extends Phaser.Scene {
                 fixedFood.personC
             ], 'starting_distribution');
         }, 14540253, '#000000');
-        this.createSelfInterestActionButton(390, 675, 300, 'Redistribute to maximize survival', () => {
-            this.applySelfInterestAllocation(this.buildSelfInterestPartialAllocation(), 'partial_button');
-        }, 14540253, '#000000');
-        this.createSelfInterestActionButton(720, 675, 240, 'Divide equally', () => {
-            const equalShare = fixedFood.total / 3;
-            this.applySelfInterestAllocation([
-                equalShare,
-                equalShare,
-                equalShare
-            ], 'equal_button');
-        }, 14540253, '#000000');
         this.createSelfInterestActionButton(1070, 675, 270, 'Submit arrangement', () => {
-            this.storeSelfInterestAllocation();
-            this.showFinalGameScreen();
+            if (this.allocationStage === 'submitted') return;
+            if (isInitial) {
+                this.storeFreeAllocation();
+                this.allocationStage = 'submitted';
+                this.showFoodPolicyTransition('Task 2', 'Second, see what happens when you divide the food equally among the members of the group.', () => this.showEqualDivisionTask());
+            } else {
+                this.storeSelfInterestAllocation();
+                this.allocationStage = 'submitted';
+                this.showFinalGameScreen();
+            }
         });
+
+        ;
     }
     createSelfInterestFoodPieces() {
         const roles = [
@@ -2389,7 +2418,21 @@ export default class Start extends Phaser.Scene {
                 food.setDepth(20);
                 food.assignedPerson = role.label;
                 this.input.setDraggable(food);
+                food.on('pointerdown', () => { food.wasDragged = false; });
+                food.on('pointerup', () => {
+                    if (food.wasDragged) return;
+                    if (this.selectedSelfInterestFood && this.selectedSelfInterestFood !== food && this.selectedSelfInterestFood.assignedPerson !== food.assignedPerson) {
+                        this.moveSelfInterestFood(this.selectedSelfInterestFood, food.assignedPerson);
+                    } else {
+                        this.clearSelfInterestFoodSelection();
+                        this.selectedSelfInterestFood = food;
+                        food.setStrokeStyle(3, 0x0066cc);
+                        this.selfInterestSummaryText.setText('You may drag the food to another person or leave it as it is.');
+                    }
+                });
                 food.on('dragstart', () => {
+                    this.clearSelfInterestFoodSelection();
+                    food.wasDragged = true;
                     food.setDepth(100);
                 });
                 food.on('drag', (pointer, dragX, dragY) => {
@@ -2404,21 +2447,30 @@ export default class Start extends Phaser.Scene {
                             destination = roleLabel;
                         }
                     });
-                    if (destination && destination !== food.assignedPerson) {
-                        this.selfInterestCounts[food.assignedPerson] -= 1;
-                        food.assignedPerson = destination;
-                        this.selfInterestCounts[destination] += 1;
-                        this.selfInterestEqualApplied = false;
-                        this.selfInterestPartialApplied = false;
-                        this.selfInterestAllocationSource = 'manual';
-                    }
-                    this.refreshSelfInterestFoodPositions();
+                    this.moveSelfInterestFood(food, destination);
                     food.setDepth(20);
                 });
                 this.selfInterestFoods.push(food);
                 this.addQuestionObject(food);
             }
         });
+        this.refreshSelfInterestFoodPositions();
+    }
+    clearSelfInterestFoodSelection() {
+        if (this.selectedSelfInterestFood) this.selectedSelfInterestFood.setStrokeStyle(1, 0);
+        this.selectedSelfInterestFood = null;
+        this.selfInterestSummaryText.setText('You may drag the food to another person or leave it as it is.');
+    }
+    moveSelfInterestFood(food, destination) {
+        if (destination && destination !== food.assignedPerson) {
+            this.selfInterestCounts[food.assignedPerson] -= 1;
+            food.assignedPerson = destination;
+            this.selfInterestCounts[destination] += 1;
+            this.selfInterestEqualApplied = false;
+            this.selfInterestPartialApplied = false;
+            this.selfInterestAllocationSource = 'manual';
+        }
+        this.clearSelfInterestFoodSelection();
         this.refreshSelfInterestFoodPositions();
     }
     refreshSelfInterestFoodPositions() {
@@ -2458,6 +2510,7 @@ export default class Start extends Phaser.Scene {
         });
     }
     applySelfInterestAllocation(allocation, source) {
+        this.clearSelfInterestFoodSelection();
         const totalAssigned = allocation.reduce((sum, amount) => sum + amount, 0);
         if (totalAssigned !== this.selfInterestFoods.length || allocation.some(amount => !Number.isInteger(amount) || amount < 0)) {
             throw new Error('Invalid self-interest allocation preset.');
@@ -2584,6 +2637,12 @@ export default class Start extends Phaser.Scene {
             qualtricsId: this.gameData.qualtricsId,
             saveStatus: saveStatus,
             summary: {
+                freeAllocationFinal: this.gameData.freeAllocationFinal,
+                freeAllocationGini: this.gameData.freeAllocationGini,
+                freeAllocationSurvivors: this.gameData.freeAllocationSurvivors,
+                freeAllocationTotalMoved: this.gameData.freeAllocationTotalMoved,
+                freeAllocationDurationMs: this.gameData.freeAllocationDurationMs,
+                redistributionFeasibility: this.gameData.redistributionFeasibility,
                 condition: this.gameData.condition,
                 gameVersion: this.gameData.gameVersion,
                 respondentDecile: this.gameData.respondentDecile,
@@ -2618,7 +2677,7 @@ export default class Start extends Phaser.Scene {
         this.gameData.gameEndTime = new Date().toISOString();
         this.gameData.totalDurationMs = new Date(this.gameData.gameEndTime) - new Date(this.gameData.gameStartTime);
         this.addQuestionObject(this.add.rectangle(640, 360, 1000, 500, 16777215).setStrokeStyle(4, 0));
-        const statusText = this.add.text(640, 270, 'Thank you for completing the survival game.\n\nSaving your responses...', {
+        const statusText = this.add.text(640, 270, 'Thank you for completing the Survival Task.\n\nPlease wait while we save your answers.', {
             fontSize: '30px',
             color: '#000000',
             align: 'center',
@@ -2630,7 +2689,7 @@ export default class Start extends Phaser.Scene {
             const closeButton = this.add.rectangle(640, 540, 360, 65, 0);
             closeButton.setInteractive({ useHandCursor: true });
             closeButton.setDepth(50);
-            const closeText = this.add.text(640, 540, 'Close Game Tab', {
+            const closeText = this.add.text(640, 540, 'Return to survey', {
                 fontSize: '28px',
                 color: '#ffffff'
             }).setOrigin(0.5);
@@ -2640,7 +2699,7 @@ export default class Start extends Phaser.Scene {
             this.addQuestionObject(closeText);
             const closeGameTab = () => {
                 window.close();
-                this.addQuestionObject(this.add.text(640, 630, 'If this tab does not close automatically, close it manually and return to the survey tab.', {
+                this.addQuestionObject(this.add.text(640, 630, 'If this tab stays open, close it and return to the survey.', {
                     fontSize: '22px',
                     color: '#000000',
                     align: 'center',
@@ -2659,13 +2718,13 @@ export default class Start extends Phaser.Scene {
         this.saveGameDataToGoogleSheets().then(() => {
             this.gameData.saveStatus = 'request_sent';
             this.notifyQualtricsComplete('request_sent');
-            statusText.setText('Thank you for completing the survival game.\n\nYour save request was sent. Return to the survey when you are ready.');
+            statusText.setText('Your task is complete.\nReturn to the survey to finish.');
             showCloseButton();
             console.log('Google Sheets save request sent.');
         }).catch(error => {
             this.gameData.saveStatus = 'request_failed';
             this.notifyQualtricsComplete('request_failed');
-            statusText.setText('Thank you for completing the survival game.\n\nThe game is complete, but the Google Sheets request could not be sent. A backup summary was returned to the survey.');
+            statusText.setText('We could not finish saving your answers.\nReturn to the survey and notify the researcher.');
             showCloseButton();
             console.error('Google Sheets save failed:', error);
         });
@@ -2710,33 +2769,23 @@ export default class Start extends Phaser.Scene {
                 this.createNextButton(640, y, 'Next', callback);
             };
             if (variableName === 'totalFoodEstimate') {
-                addNext(() => {
-                    if (this.isMobileDevice() && this.isPortraitMode()) {
-                        this.showRotatePhoneScreen(this.showEqualDivisionTask);
-                    } else {
-                        this.showEqualDivisionTask();
-                    }
-                });
+                addNext(() => this.showFoodPolicyTransition('Task 1', 'First, choose how to arrange the food among the members of the group.', () => this.startSelfInterestAllocation('initial')));
             } else if (variableName === 'perCapitaEstimate') {
                 addNext(() => {
                     this.showGroupDistributionPreferenceQuestion();
                 });
             } else if (variableName === 'groupDistributionPreference') {
-                addNext(() => {
-                    if (this.isMobileDevice() && this.isPortraitMode()) {
-                        this.showRotatePhoneScreen(this.showPartialRedistributionTask);
-                    } else {
-                        this.showPartialRedistributionTask();
-                    }
-                });
+                addNext(() => this.showFoodPolicyTransition('Task 3', 'Third, see what happens when you move food from people with more than 5 pieces of food to members of the group with less.', () => this.showPartialRedistributionTask()));
             } else if (variableName === 'partialRedistributionPreference') {
                 addNext(() => {
                     this.showDistributivePrincipleQuestion();
                 });
             } else if (variableName === 'distributivePrinciplePriority') {
                 addNext(() => {
-                    this.showSocialContractQuestion();
+                    this.showRedistributionFeasibility();
                 });
+            } else if (variableName === 'redistributionFeasibility') {
+                addNext(() => this.showSocialContractQuestion());
             } else if (variableName === 'socialContractGuarantee') {
                 addNext(() => {
                     this.showSurvivalRedistributionQuestion();
@@ -2868,6 +2917,7 @@ export default class Start extends Phaser.Scene {
         return object;
     }
     clearQuestionScreen() {
+        this.clearInstructionReview();
         if (!this.questionObjects) {
             return;
         }
@@ -2889,5 +2939,88 @@ export default class Start extends Phaser.Scene {
             }
         });
         this.gameObjects = [];
+    }
+
+    showFoodPolicyTransition(title, detail, next) {
+        this.clearQuestionScreen();
+        this.clearGameObjects();
+        this.addQuestionObject(this.add.rectangle(640, 360, 1120, 600, 16777215).setStrokeStyle(3, 0));
+        this.addQuestionObject(this.add.text(640, 180, title, {fontSize: '32px', color: '#000000', align: 'center', wordWrap: {width: 980}}).setOrigin(0.5));
+        this.addQuestionObject(this.add.text(640, 350, detail, {fontSize: '27px', color: '#000000', align: 'center', wordWrap: {width: 960}}).setOrigin(0.5));
+        this.createNextButton(640, 620, 'Continue', () => {
+            if (this.isMobileDevice() && this.isPortraitMode()) this.showRotatePhoneScreen(next);
+            else next();
+        });
+
+        ;
+    }
+    storeFreeAllocation() {
+        const f = this.getFixedFoodCounts();
+        const initial = [f.personA, f.personB, f.personC];
+        const values = ['Person A', 'Person B', 'Person C'].map(p => this.selfInterestCounts[p]);
+        if (values.some(n => !Number.isInteger(n) || n < 0) || values.reduce((a,b) => a+b, 0) !== f.total) throw new Error('Invalid free allocation');
+        this.gameData.freeAllocationFinal = {personA: values[0], personB: values[1], personC: values[2]};
+        this.gameData.freeAllocationGini = this.calculateAllocationGini(values);
+        this.gameData.freeAllocationSurvivors = values.filter(n => n >= 5).length;
+        this.gameData.freeAllocationTotalMoved = values.reduce((sum,n,i) => sum + Math.abs(n-initial[i]),0)/2;
+        this.gameData.freeAllocationDurationMs = Date.now() - this.allocationStartedAt;
+    }
+    showRedistributionFeasibility() {
+        this.clearQuestionScreen();
+        this.addQuestionObject(this.add.rectangle(640, 360, 1120, 600, 16777215).setStrokeStyle(3, 0));
+        this.addQuestionObject(this.add.text(640, 200, 'Could the available food be distributed so that all three people have at least five pieces each?', {fontSize: '29px', color: '#000000', align: 'center', wordWrap: {width: 960}}).setOrigin(0.5));
+        const answers = ['Yes', 'No'];
+        if (Phaser.Math.Between(0, 1) === 1) answers.reverse();
+        answers.push('Not sure');
+        answers.forEach((label,i) => this.createAnswerButton(640, 350+i*90, label, 'redistributionFeasibility'));
+
+        ;
+    }
+
+    addInstructionReview(text, x = 150, onReview = null) {
+        this.reviewInstructionsText = text;
+        const button = this.add.rectangle(x, 675, 250, 42, 0xffffff).setStrokeStyle(2, 0x263238).setDepth(2000).setInteractive({useHandCursor: true});
+        const label = this.add.text(x, 675, 'Review instructions', {fontFamily: 'Arial', fontSize: '20px', color: '#263238'}).setOrigin(0.5).setDepth(2001);
+        this.reviewInstructionsControls = [button, label];
+        button.on('pointerdown', () => { if (onReview) onReview(); else this.openInstructionReview(); });
+    }
+    openInstructionReview() {
+        if (this.instructionReviewOverlay) return;
+        const disabled = [];
+        const visit = object => {
+            if (object.input && object.input.enabled) { disabled.push(object); object.input.enabled = false; }
+            if (object.list) object.list.forEach(visit);
+        };
+        this.children.list.forEach(visit);
+        const pausedTime = this.time.paused;
+        this.time.paused = true;
+        const tweens = this.tweens.getTweens().filter(tween => !tween.paused);
+        tweens.forEach(tween => tween.pause());
+        const objects = [];
+        const add = object => { objects.push(object); return object; };
+        const shade = add(this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.55).setDepth(10000).setInteractive());
+        const stop = (...args) => { const event = args[args.length - 1]; if (event && event.stopPropagation) event.stopPropagation(); };
+        ['pointerdown', 'pointerup', 'pointermove'].forEach(event => shade.on(event, stop));
+        add(this.add.rectangle(640, 360, 1020, 500, 0xffffff).setStrokeStyle(3, 0x263238).setDepth(10001));
+        add(this.add.text(640, 165, 'Review instructions', {fontFamily: 'Arial', fontSize: '30px', color: '#17212b'}).setOrigin(0.5).setDepth(10002));
+        add(this.add.text(640, 340, this.reviewInstructionsText, {fontFamily: 'Arial', fontSize: '26px', color: '#17212b', align: 'center', wordWrap: {width: 890}, lineSpacing: 12}).setOrigin(0.5).setDepth(10002));
+        const close = add(this.add.rectangle(640, 550, 260, 56, 0x17212b).setDepth(10003).setInteractive({useHandCursor: true}));
+        add(this.add.text(640, 550, 'Return to task', {fontFamily: 'Arial', fontSize: '24px', color: '#ffffff'}).setOrigin(0.5).setDepth(10004));
+        this.instructionReviewOverlay = {objects, disabled, pausedTime, tweens};
+        close.on('pointerup', (...args) => { stop(...args); this.closeInstructionReview(); });
+    }
+    closeInstructionReview() {
+        const overlay = this.instructionReviewOverlay;
+        if (!overlay) return;
+        this.instructionReviewOverlay = null;
+        overlay.objects.forEach(object => object.destroy());
+        overlay.disabled.forEach(object => { if (object.active && object.input) object.input.enabled = true; });
+        this.time.paused = overlay.pausedTime;
+        overlay.tweens.forEach(tween => { if (tween.parent) tween.resume(); });
+    }
+    clearInstructionReview() {
+        this.closeInstructionReview();
+        (this.reviewInstructionsControls || []).forEach(object => { if (object.active) object.destroy(); });
+        this.reviewInstructionsControls = [];
     }
 }
