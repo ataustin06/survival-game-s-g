@@ -73,7 +73,7 @@ export default class Start extends Phaser.Scene {
             manipulationCheckPassed: null,
             groupDistributionPreference: null,
             partialRedistributionPreference: null,
-            distributivePrinciplePriority: null,
+            distributivePrinciplePriority: null, // Retired duplicate item; retained for export compatibility.
             socialContractGuarantee: null,
             personalVsGroupResponsibility: null,
             fairRuleChoice: null,
@@ -1070,6 +1070,35 @@ export default class Start extends Phaser.Scene {
         this.createAnswerButton(640, 460, answers[1], 'totalFoodEstimate');
         this.createAnswerButton(640, 560, answers[2], 'totalFoodEstimate');
     }
+    showRedistributionBlock(index = 0) {
+        if (!this.gameData.redistributionTaskOrder) {
+            this.gameData.redistributionTaskOrder = Phaser.Math.Between(0, 1) === 0
+                ? ['equal', 'partial'] : ['partial', 'equal'];
+            this.gameData.redistributionBlocksCompleted = [];
+        }
+        const block = this.gameData.redistributionTaskOrder[index];
+        if (!block) {
+            this.showRedistributionFeasibility();
+            return;
+        }
+        const ordinal = index === 0 ? 'Second' : 'Third';
+        const detail = block === 'equal'
+            ? `${ordinal}, see what happens when you divide the food equally among the members of the group.`
+            : `${ordinal}, see what happens when you move food from people with more than 5 pieces of food to members of the group with less.`;
+        this.showFoodPolicyTransition(`Task ${index + 2}`, detail, () => {
+            if (block === 'equal') this.showEqualDivisionTask();
+            else this.showPartialRedistributionTask();
+        });
+    }
+    completeRedistributionBlock(block) {
+        const order = this.gameData.redistributionTaskOrder;
+        if (!order || !order.includes(block)) throw new Error('Redistribution block order missing');
+        if (!this.gameData.redistributionBlocksCompleted.includes(block)) {
+            this.gameData.redistributionBlocksCompleted.push(block);
+        }
+        this.showRedistributionBlock(order.indexOf(block) + 1);
+    }
+
     showEqualDivisionTask(restoreOriginal = false) {
         this.clearQuestionScreen();
         const fixedFood = this.getFixedFoodCounts();
@@ -1593,7 +1622,7 @@ export default class Start extends Phaser.Scene {
                 if (!this.personalRedistributionNextShown) {
                     this.personalRedistributionNextShown = true;
                     this.createNextButton(640, 675, 'Next', () => {
-                        this.showDistributivePrincipleQuestion();
+                        this.showPersonalVsGroupResponsibilityQuestion();
                     });
                 }
             } else {
@@ -1701,25 +1730,6 @@ export default class Start extends Phaser.Scene {
         this.addQuestionObject(check);
         this.addQuestionObject(text);
     }
-    showDistributivePrincipleQuestion() {
-        this.clearQuestionScreen();
-        this.addQuestionObject(this.add.rectangle(640, 360, 1120, 500, 16777215)).setStrokeStyle(4, 0);
-        this.addQuestionObject(this.add.text(640, 230, 'When deciding how to distribute food, which principle should be the highest priority?', {
-            fontSize: '29px',
-            color: '#000000',
-            align: 'center',
-            wordWrap: { width: 980 },
-            lineSpacing: 6
-        }).setOrigin(0.5));
-        const answers = Phaser.Utils.Array.Shuffle([
-            'Making sure the person who usually collects the most food has enough food to survive.',
-            'Making sure the person who usually collects the least food has enough food to survive.'
-        ]);
-        this.createAnswerButton(640, 410, answers[0], 'distributivePrinciplePriority');
-        this.createAnswerButton(640, 535, answers[1], 'distributivePrinciplePriority');
-
-        ;
-    }
     showSocialContractQuestion() {
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 1120, 500, 16777215)).setStrokeStyle(4, 0);
@@ -1811,8 +1821,8 @@ export default class Start extends Phaser.Scene {
             lineSpacing: 6
         }).setOrigin(0.5));
         const answers = Phaser.Utils.Array.Shuffle([
-            'The group should make sure Person C gets at least 5 pieces of the food collected every day because the other people have more food and because without enough food Person C will not survive.',
-            'The group should make sure Person A gets at least 5 pieces of the food collected every day because Person A usually is able to share the most food and because Person A is most likely to survive in the long run.'
+            'Person C, because they usually collect the least food and need the most help to survive.',
+            'Person A, because they usually collect the most food and can contribute the most to feeding the group.'
         ]);
         this.createAnswerButton(640, 400, answers[0], 'foodPriorityChoice');
         this.createAnswerButton(640, 535, answers[1], 'foodPriorityChoice');
@@ -2412,7 +2422,7 @@ export default class Start extends Phaser.Scene {
             if (isInitial) {
                 this.storeFreeAllocation();
                 this.allocationStage = 'submitted';
-                this.showFoodPolicyTransition('Task 2', 'Second, see what happens when you divide the food equally among the members of the group.', () => this.showEqualDivisionTask());
+                this.showRedistributionBlock();
             } else {
                 this.storeSelfInterestAllocation();
                 this.allocationStage = 'submitted';
@@ -2665,6 +2675,8 @@ export default class Start extends Phaser.Scene {
             qualtricsId: this.gameData.qualtricsId,
             saveStatus: saveStatus,
             summary: {
+                redistributionTaskOrder: this.gameData.redistributionTaskOrder,
+                redistributionBlocksCompleted: this.gameData.redistributionBlocksCompleted,
                 freeAllocationFinal: this.gameData.freeAllocationFinal,
                 freeAllocationGini: this.gameData.freeAllocationGini,
                 freeAllocationSurvivors: this.gameData.freeAllocationSurvivors,
@@ -2809,14 +2821,10 @@ export default class Start extends Phaser.Scene {
                     this.showGroupDistributionPreferenceQuestion();
                 });
             } else if (variableName === 'groupDistributionPreference') {
-                addNext(() => this.showFoodPolicyTransition('Task 3', 'Third, see what happens when you move food from people with more than 5 pieces of food to members of the group with less.', () => this.showPartialRedistributionTask()));
+                addNext(() => this.completeRedistributionBlock('equal'));
             } else if (variableName === 'partialRedistributionPreference') {
                 addNext(() => {
-                    this.showRedistributionFeasibility();
-                });
-            } else if (variableName === 'distributivePrinciplePriority') {
-                addNext(() => {
-                    this.showPersonalVsGroupResponsibilityQuestion();
+                    this.completeRedistributionBlock('partial');
                 });
             } else if (variableName === 'manipulationCheckChoice') {
                 this.gameData.manipulationCheckChoice = { Yes: 'yes', No: 'no', 'Not sure': 'not_sure' }[label];
