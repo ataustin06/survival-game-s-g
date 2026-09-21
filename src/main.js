@@ -1,6 +1,6 @@
 console.log('MAIN.JS LOADED');
 
-import Start from './scenes/Start.js?v=20260921-task-wording';
+import Start from './scenes/Start.js?v=20260921-survival-recording-v4';
 
 console.log('START IMPORTED:', Start);
 

@@ -22,7 +22,7 @@ export default class Start extends Phaser.Scene {
             gameId: gameId,
             qualtricsId: qualtricsId,
             condition: 'sufficiency',
-            gameVersion: 'sufficiency_english_gini_preferences_v3',
+            gameVersion: 'sufficiency_english_gini_preferences_v4_recording',
             gameStartTime: new Date().toISOString(),
             gameEndTime: null,
             totalDurationMs: null,
@@ -106,6 +106,8 @@ export default class Start extends Phaser.Scene {
             selfInterestEqualButtonUsed: false,
             selfInterestPartialButtonUsed: false,
             screenTimings: {},
+            answerChoiceOrders: {},
+            answerChoiceOrderHistory: {},
             treeClicks: {
                 personA: 0,
                 personB: 0,
@@ -147,6 +149,33 @@ export default class Start extends Phaser.Scene {
         } else {
             this.showInstructionScreen();
         }
+    }
+    // Elapsed wall-clock milliseconds, including time spent in another tab.
+    finishScreenTiming() {
+        if (!this.activeTimingScreen) return;
+        const elapsed = Math.max(0, performance.now() - this.activeScreenStartedAt);
+        const name = this.activeTimingScreen;
+        this.gameData.screenTimings[name] = (this.gameData.screenTimings[name] || 0) + elapsed;
+        this.activeTimingScreen = null;
+    }
+    enterRecordedScreen(name) {
+        this.finishScreenTiming();
+        this.activeTimingScreen = name;
+        this.activeScreenStartedAt = performance.now();
+        this.screenAnswerOrders = {};
+    }
+    recordDisplayedAnswer(variableName, value, label) {
+        this.gameData.answerChoiceOrders ||= {};
+        this.gameData.answerChoiceOrderHistory ||= {};
+        this.screenAnswerOrders ||= {};
+        if (!this.screenAnswerOrders[variableName]) {
+            const order = [];
+            this.screenAnswerOrders[variableName] = order;
+            this.gameData.answerChoiceOrders[variableName] = order;
+            (this.gameData.answerChoiceOrderHistory[variableName] ||= []).push(order);
+        }
+        // Buttons are created in displayed top-to-bottom order.
+        this.screenAnswerOrders[variableName].push({ value, label });
     }
     getFixedFoodCounts() {
         return {
@@ -308,6 +337,7 @@ export default class Start extends Phaser.Scene {
         return window.innerHeight > window.innerWidth;
     }
     showRotatePhoneScreen(nextFunction) {
+        this.enterRecordedScreen('showRotatePhoneScreen');
         this.clearQuestionScreen();
         this.clearGameObjects();
         this.addQuestionObject(this.add.rectangle(640, 360, 1080, 430, 16777215)).setStrokeStyle(4, 0);
@@ -322,6 +352,7 @@ export default class Start extends Phaser.Scene {
         });
     }
     showInstructionScreen() {
+        this.enterRecordedScreen('instruction_' + (this.instructionIndex + 1));
         this.cameras.main.setBackgroundColor('#ffffff');
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 1000, 500, 16777215)).setStrokeStyle(4, 0);
@@ -349,6 +380,7 @@ export default class Start extends Phaser.Scene {
         });
     }
     showSurvivalCheckQuestion() {
+        this.enterRecordedScreen('showSurvivalCheckQuestion');
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 900, 450, 16777215)).setStrokeStyle(4, 0);
         this.addQuestionObject(this.add.text(250, 175, 'How many pieces of food does each person need to survive the day?', {
@@ -364,6 +396,7 @@ export default class Start extends Phaser.Scene {
         this.addInstructionReview('', 150, () => { this.instructionIndex = 0; this.showInstructionScreen(); });
     }
     createSurvivalCheckButton(centerX, centerY, label, isCorrect) {
+        this.recordDisplayedAnswer('survivalCheck', label, label);
         const paddingX = 24;
         const paddingY = 14;
         const text = this.add.text(centerX, centerY, label, {
@@ -387,6 +420,7 @@ export default class Start extends Phaser.Scene {
         });
     }
     showSurvivalCheckFeedback(message) {
+        this.enterRecordedScreen('showSurvivalCheckFeedback');
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 900, 320, 16777215)).setStrokeStyle(4, 0);
         this.addQuestionObject(this.add.text(250, 290, message, {
@@ -400,6 +434,7 @@ export default class Start extends Phaser.Scene {
         });
     }
     startFoodCollectionTask() {
+        this.enterRecordedScreen('startFoodCollectionTask');
         this.clearQuestionScreen();
         this.clearGameObjects();
         this.foodCounts = {
@@ -684,6 +719,7 @@ export default class Start extends Phaser.Scene {
     update() {
     }
     showDistributionDisplay() {
+        this.enterRecordedScreen('showDistributionDisplay');
         this.clearGameObjects();
         this.clearQuestionScreen();
         this.cameras.main.setBackgroundColor('#7fcf7a');
@@ -1049,6 +1085,7 @@ export default class Start extends Phaser.Scene {
         }
     }
     showTotalFoodEstimateQuestion() {
+        this.enterRecordedScreen('showTotalFoodEstimateQuestion');
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 1120, 520, 16777215).setStrokeStyle(4, 0));
         this.addQuestionObject(this.add.text(640, 220, 'How many total pieces of food do you estimate the group collected today?', {
@@ -1100,6 +1137,7 @@ export default class Start extends Phaser.Scene {
     }
 
     showEqualDivisionTask(restoreOriginal = false) {
+        this.enterRecordedScreen('showEqualDivisionTask');
         this.clearQuestionScreen();
         const fixedFood = this.getFixedFoodCounts();
         const totalFood = fixedFood.total;
@@ -1306,6 +1344,7 @@ export default class Start extends Phaser.Scene {
         }
     }
     showPerCapitaQuestion() {
+        this.enterRecordedScreen('showPerCapitaQuestion');
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 900, 450, 16777215)).setStrokeStyle(4, 0);
         this.addQuestionObject(this.add.text(230, 170, 'After dividing the food equally, how many people had at least 5 pieces?', {
@@ -1325,6 +1364,7 @@ export default class Start extends Phaser.Scene {
         ;
     }
     showGroupDistributionPreferenceQuestion() {
+        this.enterRecordedScreen('showGroupDistributionPreferenceQuestion');
         this.clearQuestionScreen();
         const fixedFood = this.getFixedFoodCounts();
         this.addQuestionObject(this.createStaticHumanAvatar(260, 115, 'Person A', 0.78, 13382451, fixedFood.personA));
@@ -1384,6 +1424,7 @@ export default class Start extends Phaser.Scene {
         return person;
     }
     showPartialRedistributionTask() {
+        this.enterRecordedScreen('showPartialRedistributionTask');
         this.clearQuestionScreen();
         const fixedFood = this.getFixedFoodCounts();
         const roleLabels = [
@@ -1538,6 +1579,7 @@ export default class Start extends Phaser.Scene {
         ;
     }
     showPartialRedistributionPreferenceQuestion() {
+        this.enterRecordedScreen('showPartialRedistributionPreferenceQuestion');
         this.clearQuestionScreen();
         const fixedFood = this.getFixedFoodCounts();
         this.addQuestionObject(this.createStaticHumanAvatar(260, 125, 'Person A', 0.78, 13382451, fixedFood.personA));
@@ -1561,6 +1603,7 @@ export default class Start extends Phaser.Scene {
         ;
     }
     showPersonalRedistributionQuestion() {
+        this.enterRecordedScreen('showPersonalRedistributionQuestion');
         this.clearQuestionScreen();
         this.gameData.personalRedistributionSelected = {
             noRedistribution: false,
@@ -1598,6 +1641,7 @@ export default class Start extends Phaser.Scene {
         ;
     }
     createPersonalRedistributionCheckboxButton(centerX, centerY, label, key) {
+        this.recordDisplayedAnswer('personalRedistributionSelected', key, label);
         const box = this.add.rectangle(centerX - 420, centerY, 34, 34, 16777215);
         box.setStrokeStyle(3, 0);
         box.setInteractive({ useHandCursor: true });
@@ -1644,6 +1688,7 @@ export default class Start extends Phaser.Scene {
         this.addQuestionObject(text);
     }
     showSurvivalRedistributionQuestion() {
+        this.enterRecordedScreen('showSurvivalRedistributionQuestion');
         this.clearQuestionScreen();
         this.gameData.survivalRedistributionSelected = {
             noRedistribution: false,
@@ -1685,6 +1730,7 @@ export default class Start extends Phaser.Scene {
         ;
     }
     createCheckboxButton(centerX, centerY, label, key) {
+        this.recordDisplayedAnswer('survivalRedistributionSelected', key, label);
         const box = this.add.rectangle(centerX - 420, centerY, 34, 34, 16777215);
         box.setStrokeStyle(3, 0);
         box.setInteractive({ useHandCursor: true });
@@ -1731,6 +1777,7 @@ export default class Start extends Phaser.Scene {
         this.addQuestionObject(text);
     }
     showSocialContractQuestion() {
+        this.enterRecordedScreen('showSocialContractQuestion');
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 1120, 500, 16777215)).setStrokeStyle(4, 0);
         this.addQuestionObject(this.add.text(640, 235, 'Should the group agree to make sure everyone has enough food to survive?', {
@@ -1773,6 +1820,7 @@ export default class Start extends Phaser.Scene {
         screens[key]();
     }
     showPersonalVsGroupResponsibilityQuestion() {
+        this.enterRecordedScreen('showPersonalVsGroupResponsibilityQuestion');
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 1120, 500, 16777215)).setStrokeStyle(4, 0);
         this.addQuestionObject(this.add.text(640, 230, 'In this situation, which should receive greater priority: personal responsibility or shared responsibility for meeting food needs?', {
@@ -1792,6 +1840,7 @@ export default class Start extends Phaser.Scene {
         ;
     }
     showFairRuleQuestion() {
+        this.enterRecordedScreen('showFairRuleQuestion');
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 1120, 500, 16777215)).setStrokeStyle(4, 0);
         this.addQuestionObject(this.add.text(640, 230, 'Which approach to distributing food would be fairer?', {
@@ -1811,6 +1860,7 @@ export default class Start extends Phaser.Scene {
         ;
     }
     showFoodRankReminderScreen() {
+        this.enterRecordedScreen('showFoodRankReminderScreen');
         this.clearQuestionScreen();
         this.gameData.foodRankReminder = 'shown';
         this.addQuestionObject(this.add.rectangle(640, 360, 1080, 520, 16777215)).setStrokeStyle(4, 0);
@@ -1830,6 +1880,7 @@ export default class Start extends Phaser.Scene {
         });
     }
     showFoodPriorityQuestion() {
+        this.enterRecordedScreen('showFoodPriorityQuestion');
         this.clearQuestionScreen();
         const fixedFood = this.getFixedFoodCounts();
         this.addQuestionObject(this.createStaticHumanAvatar(280, 90, 'Person A', 0.82, 13382451, fixedFood.personA));
@@ -1853,6 +1904,7 @@ export default class Start extends Phaser.Scene {
         ;
     }
     showHardWorkReminderScreen() {
+        this.enterRecordedScreen('showHardWorkReminderScreen');
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 1080, 520, 16777215)).setStrokeStyle(4, 0);
         this.addQuestionObject(this.createTiredHumanAvatar(280, 240, 'Person A', 1.12, 13382451));
@@ -1870,6 +1922,7 @@ export default class Start extends Phaser.Scene {
         });
     }
     showWorkBreakQuestion() {
+        this.enterRecordedScreen('showWorkBreakQuestion');
         this.clearQuestionScreen();
         this.addQuestionObject(this.createTiredFace(640, 145, 1.6));
         this.addQuestionObject(this.add.rectangle(640, 465, 1120, 360, 16777215)).setStrokeStyle(4, 0);
@@ -1940,6 +1993,7 @@ export default class Start extends Phaser.Scene {
         return face;
     }
     showFloodRiskInstructionScreen() {
+        this.enterRecordedScreen('showFloodRiskInstructionScreen');
         this.clearQuestionScreen();
         const sticksOnLeft = Phaser.Math.Between(0, 1) === 0;
         this.floodTaskSides = {
@@ -2053,6 +2107,7 @@ export default class Start extends Phaser.Scene {
         });
     }
     showFloodPreparationQuestion() {
+        this.enterRecordedScreen('showFloodPreparationQuestion');
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 1120, 560, 16777215)).setStrokeStyle(4, 0);
         this.drawFloodTaskTree(this.floodTaskSides.treeX, 165);
@@ -2077,6 +2132,7 @@ export default class Start extends Phaser.Scene {
         ;
     }
     showPersonDInstructionScreen(nextQuestion = () => this.showPersonDShareQuestion()) {
+        this.enterRecordedScreen('showPersonDInstructionScreen');
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 1120, 560, 16777215)).setStrokeStyle(4, 0);
         this.addQuestionObject(this.add.text(640, 165, 'A new person (Person D) wanders into the group\u2019s location and begs for food. The new person is peaceful and not threatening.', {
@@ -2096,6 +2152,7 @@ export default class Start extends Phaser.Scene {
         });
     }
     showPersonDShareQuestion() {
+        this.enterRecordedScreen('showPersonDShareQuestion');
         this.clearQuestionScreen();
         this.addQuestionObject(this.createPersonDOutstretchedAvatar(640, 125, 'Person D', 0.82, 9067076));
         this.addQuestionObject(this.add.rectangle(640, 425, 1120, 300, 16777215)).setStrokeStyle(4, 0);
@@ -2147,6 +2204,7 @@ export default class Start extends Phaser.Scene {
         this.addQuestionObject(this.add.triangle(x, y + 8 * scale, 0, 38 * scale, 19 * scale, -20 * scale, 38 * scale, 38 * scale, 16765514));
     }
     showPersonDEmpathyQuestion() {
+        this.enterRecordedScreen('showPersonDEmpathyQuestion');
         this.clearQuestionScreen();
         this.addQuestionObject(this.createPersonDOutstretchedAvatar(640, 125, 'Person D', 0.82, 9067076));
         this.addQuestionObject(this.add.rectangle(640, 450, 1120, 350, 16777215)).setStrokeStyle(4, 0);
@@ -2167,6 +2225,7 @@ export default class Start extends Phaser.Scene {
         ;
     }
     showCooperationCompetitionInstructionScreen() {
+        this.enterRecordedScreen('showCooperationCompetitionInstructionScreen');
         this.clearQuestionScreen();
         const cooperativeOnLeft = Phaser.Math.Between(0, 1) === 0;
         const leftX = 345;
@@ -2256,6 +2315,7 @@ export default class Start extends Phaser.Scene {
         return person;
     }
     showCooperationCompetitionQuestion() {
+        this.enterRecordedScreen('showCooperationCompetitionQuestion');
         this.clearQuestionScreen();
         const fixedFood = this.getFixedFoodCounts();
         this.addQuestionObject(this.createStaticHumanAvatar(280, 115, 'Person A', 0.78, 13382451, fixedFood.personA));
@@ -2305,6 +2365,7 @@ export default class Start extends Phaser.Scene {
         this.showFoodPolicyTransition('Task 4', `Start again with Persons A, B, and C.\n\nFor this task, imagine you are ${respondentRole}. You have ${respondentFood} pieces of food.`, () => this.startSelfInterestAllocation());
     }
     drawSelfInterestStartingRoles(highlightedRole) {
+        this.enterRecordedScreen(highlightedRole ? 'self_interest_role_reveal' : 'self_interest_neutral_intro');
         const fixedFood = this.getFixedFoodCounts();
         const roles = [
             {
@@ -2353,6 +2414,7 @@ export default class Start extends Phaser.Scene {
         this.showSelfInterestAllocationTask();
     }
     showSelfInterestAllocationTask() {
+        this.enterRecordedScreen(this.allocationStage === 'initial' ? 'free_allocation' : 'self_interest_allocation');
         this.clearQuestionScreen();
         this.clearGameObjects();
         const fixedFood = this.getFixedFoodCounts();
@@ -2698,6 +2760,9 @@ export default class Start extends Phaser.Scene {
             qualtricsId: this.gameData.qualtricsId,
             saveStatus: saveStatus,
             summary: {
+                screenTimings: this.gameData.screenTimings,
+                answerChoiceOrders: this.gameData.answerChoiceOrders,
+                answerChoiceOrderHistory: this.gameData.answerChoiceOrderHistory,
                 economicPrincipleOrder: this.gameData.economicPrincipleOrder,
                 redistributionTaskOrder: this.gameData.redistributionTaskOrder,
                 redistributionBlocksCompleted: this.gameData.redistributionBlocksCompleted,
@@ -2741,6 +2806,7 @@ export default class Start extends Phaser.Scene {
         });
     }
     showFinalGameScreen() {
+        this.finishScreenTiming();
         this.clearQuestionScreen();
         this.gameData.gameEndTime = new Date().toISOString();
         this.gameData.totalDurationMs = new Date(this.gameData.gameEndTime) - new Date(this.gameData.gameStartTime);
@@ -2799,6 +2865,7 @@ export default class Start extends Phaser.Scene {
         console.log('FINAL GAME DATA:', this.gameData);
     }
     createAnswerButton(centerX, centerY, label, variableName) {
+        this.recordDisplayedAnswer(variableName, label, label);
         const paddingX = 24;
         const paddingY = 14;
         const text = this.add.text(centerX, centerY, label, {
@@ -2983,6 +3050,7 @@ export default class Start extends Phaser.Scene {
     }
 
     showFoodPolicyTransition(title, detail, next) {
+        this.enterRecordedScreen('transition_' + title);
         this.clearQuestionScreen();
         this.clearGameObjects();
         this.addQuestionObject(this.add.rectangle(640, 360, 1120, 600, 16777215).setStrokeStyle(3, 0));
@@ -3007,6 +3075,7 @@ export default class Start extends Phaser.Scene {
         this.gameData.freeAllocationDurationMs = Date.now() - this.allocationStartedAt;
     }
     showManipulationCheck() {
+        this.enterRecordedScreen('showManipulationCheck');
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 1120, 600, 16777215).setStrokeStyle(3, 0));
         this.addQuestionObject(this.add.text(640, 200,
@@ -3019,6 +3088,7 @@ export default class Start extends Phaser.Scene {
         answers.forEach((label, i) => this.createAnswerButton(640, 350 + i * 90, label, 'manipulationCheckChoice'));
     }
     showRedistributionFeasibility() {
+        this.enterRecordedScreen('showRedistributionFeasibility');
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 1120, 600, 16777215).setStrokeStyle(3, 0));
         this.addQuestionObject(this.add.text(640, 200, 'Could the food be distributed so everyone has at least 5 pieces?', {fontSize: '29px', color: '#000000', align: 'center', wordWrap: {width: 960}}).setOrigin(0.5));
