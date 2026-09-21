@@ -395,7 +395,7 @@ export default class Start extends Phaser.Scene {
             align: 'center',
             wordWrap: { width: 780 }
         }));
-        this.createNextButton(640, 520, 'Start Game', () => {
+        this.createNextButton(640, 520, 'Start Task', () => {
             this.startFoodCollectionTask();
         });
     }
