@@ -1780,7 +1780,7 @@ export default class Start extends Phaser.Scene {
         this.enterRecordedScreen('showSocialContractQuestion');
         this.clearQuestionScreen();
         this.addQuestionObject(this.add.rectangle(640, 360, 1120, 500, 16777215)).setStrokeStyle(4, 0);
-        this.addQuestionObject(this.add.text(640, 235, 'Should the group agree to make sure everyone has enough food to survive?', {
+        this.addQuestionObject(this.add.text(640, 235, 'Should the group agree to make sure everyone has enough food to survive, or not?', {
             fontSize: '27px',
             color: '#000000',
             align: 'center',
@@ -1797,27 +1797,37 @@ export default class Start extends Phaser.Scene {
         ;
     }
     showEconomicPrinciple(index = 0) {
+        const personDQuestions = ['personDShareChoice', 'personDEmpathyChoice'];
         if (!this.gameData.economicPrincipleOrder) {
-            this.gameData.economicPrincipleOrder = Phaser.Utils.Array.Shuffle([
+            const principleBlocks = Phaser.Utils.Array.Shuffle([
                 'personalVsGroupResponsibility', 'fairRuleChoice', 'foodPriorityChoice',
-                'workBreakChoice', 'floodPreparationChoice', 'personDShareChoice',
-                'personDEmpathyChoice', 'cooperationCompetitionChoice'
+                'workBreakChoice', 'floodPreparationChoice', 'personDBlock',
+                'cooperationCompetitionChoice'
             ]);
+            const personDOrder = Phaser.Utils.Array.Shuffle([...personDQuestions]);
+            this.gameData.economicPrincipleOrder = principleBlocks.flatMap(key =>
+                key === 'personDBlock' ? personDOrder : [key]
+            );
         }
         this.economicPrincipleIndex = index;
         const screens = {
             personalVsGroupResponsibility: () => this.showPersonalVsGroupResponsibilityQuestion(),
             fairRuleChoice: () => this.showFairRuleQuestion(),
-            foodPriorityChoice: () => this.showFoodRankReminderScreen(),
+            foodPriorityChoice: () => this.showFoodPriorityQuestion(),
             workBreakChoice: () => this.showHardWorkReminderScreen(),
             floodPreparationChoice: () => this.showFloodRiskInstructionScreen(),
-            personDShareChoice: () => this.showPersonDInstructionScreen(() => this.showPersonDShareQuestion()),
-            personDEmpathyChoice: () => this.showPersonDInstructionScreen(() => this.showPersonDEmpathyQuestion()),
+            personDShareChoice: () => this.showPersonDShareQuestion(),
+            personDEmpathyChoice: () => this.showPersonDEmpathyQuestion(),
             cooperationCompetitionChoice: () => this.showCooperationCompetitionInstructionScreen()
         };
         const key = this.gameData.economicPrincipleOrder[index];
         if (!key) { this.showSelfInterestRandomizationScreen(); return; }
-        screens[key]();
+        if (personDQuestions.includes(key) &&
+            !personDQuestions.includes(this.gameData.economicPrincipleOrder[index - 1])) {
+            this.showPersonDInstructionScreen(screens[key]);
+        } else {
+            screens[key]();
+        }
     }
     showPersonalVsGroupResponsibilityQuestion() {
         this.enterRecordedScreen('showPersonalVsGroupResponsibilityQuestion');
@@ -1859,26 +1869,6 @@ export default class Start extends Phaser.Scene {
 
         ;
     }
-    showFoodRankReminderScreen() {
-        this.enterRecordedScreen('showFoodRankReminderScreen');
-        this.clearQuestionScreen();
-        this.gameData.foodRankReminder = 'shown';
-        this.addQuestionObject(this.add.rectangle(640, 360, 1080, 520, 16777215)).setStrokeStyle(4, 0);
-        const fixedFood = this.getFixedFoodCounts();
-        this.addQuestionObject(this.createStaticHumanAvatar(280, 185, 'Person A', 1.12, 13382451, fixedFood.personA));
-        this.addQuestionObject(this.createStaticHumanAvatar(640, 185, 'Person B', 1, 3368652, fixedFood.personB));
-        this.addQuestionObject(this.createStaticHumanAvatar(1000, 185, 'Person C', 0.88, 3381606, fixedFood.personC));
-        this.addQuestionObject(this.add.text(640, 450, 'Remember, Person A usually collects the most pieces of food per day. Person B usually collects less than Person A but more than Person C. Person C usually collects the least pieces of food per day.', {
-            fontSize: '27px',
-            color: '#000000',
-            align: 'center',
-            wordWrap: { width: 940 },
-            lineSpacing: 8
-        }).setOrigin(0.5));
-        this.createNextButton(640, 675, 'Next', () => {
-            this.showFoodPriorityQuestion();
-        });
-    }
     showFoodPriorityQuestion() {
         this.enterRecordedScreen('showFoodPriorityQuestion');
         this.clearQuestionScreen();
@@ -1887,19 +1877,19 @@ export default class Start extends Phaser.Scene {
         this.addQuestionObject(this.createStaticHumanAvatar(640, 90, 'Person B', 0.74, 3368652, fixedFood.personB));
         this.addQuestionObject(this.createStaticHumanAvatar(1000, 90, 'Person C', 0.66, 3381606, fixedFood.personC));
         this.addQuestionObject(this.add.rectangle(640, 435, 1120, 390, 16777215)).setStrokeStyle(4, 0);
-        this.addQuestionObject(this.add.text(640, 285, 'Whose food needs should the group give greater priority?', {
-            fontSize: '27px',
+        this.addQuestionObject(this.add.text(640, 310, 'Person C usually collects the least food and needs help to survive. Person A usually collects the most food and can contribute more to feeding the group. When deciding whom to give food to, which person should the group prioritize?', {
+            fontSize: '24px',
             color: '#000000',
             align: 'center',
             wordWrap: { width: 980 },
             lineSpacing: 6
         }).setOrigin(0.5));
         const answers = Phaser.Utils.Array.Shuffle([
-            'Person C, because they usually collect the least food and need the most help to survive.',
-            'Person A, because they usually collect the most food and can contribute the most to feeding the group.'
+            'Person C',
+            'Person A'
         ]);
-        this.createAnswerButton(640, 400, answers[0], 'foodPriorityChoice');
-        this.createAnswerButton(640, 535, answers[1], 'foodPriorityChoice');
+        this.createAnswerButton(640, 445, answers[0], 'foodPriorityChoice');
+        this.createAnswerButton(640, 545, answers[1], 'foodPriorityChoice');
 
         ;
     }
@@ -2208,7 +2198,7 @@ export default class Start extends Phaser.Scene {
         this.clearQuestionScreen();
         this.addQuestionObject(this.createPersonDOutstretchedAvatar(640, 125, 'Person D', 0.82, 9067076));
         this.addQuestionObject(this.add.rectangle(640, 450, 1120, 350, 16777215)).setStrokeStyle(4, 0);
-        this.addQuestionObject(this.add.text(640, 325, 'Should empathy toward Person D guide the group’s decision about whether to give Person D food?', {
+        this.addQuestionObject(this.add.text(640, 325, 'When deciding whether to give Person D food, which should weigh more heavily?', {
             fontSize: '26px',
             color: '#000000',
             align: 'center',
@@ -2216,8 +2206,8 @@ export default class Start extends Phaser.Scene {
             lineSpacing: 6
         }).setOrigin(0.5));
         const answers = Phaser.Utils.Array.Shuffle([
-            'Empathy should guide the decision.',
-            'Empathy should not guide the decision.'
+            'Concern for Person D’s well-being.',
+            'The food other group members would have to give up.'
         ]);
         this.createAnswerButton(640, 445, answers[0], 'personDEmpathyChoice');
         this.createAnswerButton(640, 540, answers[1], 'personDEmpathyChoice');
@@ -2227,21 +2217,15 @@ export default class Start extends Phaser.Scene {
     showCooperationCompetitionInstructionScreen() {
         this.enterRecordedScreen('showCooperationCompetitionInstructionScreen');
         this.clearQuestionScreen();
-        const cooperativeOnLeft = Phaser.Math.Between(0, 1) === 0;
-        const leftX = 345;
-        const rightX = 935;
-        const panelY = 370;
-        this.addQuestionObject(this.add.rectangle(640, 360, 1120, 560, 16777215)).setStrokeStyle(4, 0);
-        this.addQuestionObject(this.add.text(640, 120, 'Most people cooperate with others sometimes and compete with others sometimes.', {
+        this.addQuestionObject(this.add.rectangle(640, 360, 1120, 430, 16777215)).setStrokeStyle(4, 0);
+        this.addQuestionObject(this.add.text(640, 345, 'Most people are cooperative in some situations and competitive in others.', {
             fontSize: '27px',
             color: '#000000',
             align: 'center',
             wordWrap: { width: 900 },
             lineSpacing: 6
         }).setOrigin(0.5));
-        this.drawCooperationCompetitionPanel(cooperativeOnLeft ? leftX : rightX, panelY, true);
-        this.drawCooperationCompetitionPanel(cooperativeOnLeft ? rightX : leftX, panelY, false);
-        this.createNextButton(640, 675, 'Next', () => {
+        this.createNextButton(640, 605, 'Next', () => {
             this.showCooperationCompetitionQuestion();
         });
     }
