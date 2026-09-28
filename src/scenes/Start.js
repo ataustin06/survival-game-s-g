@@ -5,7 +5,7 @@ export default class Start extends Phaser.Scene {
     preload() {
     }
     create() {
-        this.cameras.main.setBackgroundColor('#7fcf7a');
+        this.cameras.main.setBackgroundColor('#ffffff');
         const urlParams = new URLSearchParams(window.location.search);
         this.qualtricsParentOrigin = this.normalizeParentOrigin(urlParams.get('parentOrigin') || '');
         const gameId = urlParams.get('gameId');
@@ -442,20 +442,6 @@ export default class Start extends Phaser.Scene {
             'Person B': 0,
             'Person C': 0
         };
-        // Sky
-        this.addGameObject(this.add.rectangle(640, 120, 1280, 240, 12578815));
-        // Distant hills
-        this.addGameObject(this.add.ellipse(250, 285, 650, 220, 7322991));
-        this.addGameObject(this.add.ellipse(760, 285, 750, 240, 6204771));
-        this.addGameObject(this.add.ellipse(1120, 285, 520, 200, 7915640));
-        // Grass field
-        this.addGameObject(this.add.rectangle(640, 470, 1280, 500, 5025616));
-        // Grass details
-        for (let i = 0; i < 90; i += 1) {
-            const grass = this.add.line(Phaser.Math.Between(0, 1280), Phaser.Math.Between(395, 690), 0, 0, Phaser.Math.Between(-6, 6), Phaser.Math.Between(-18, -8), 3112242);
-            grass.setLineWidth(2);
-            this.addGameObject(grass);
-        }
         this.addGameObject(this.add.text(40, 60, 'Click each person, then click the tree to collect food for that person. Repeat until all three people have collected food. Select Next to continue.', {
             fontSize: '26px',
             color: '#000000',
@@ -722,7 +708,7 @@ export default class Start extends Phaser.Scene {
         this.enterRecordedScreen('showDistributionDisplay');
         this.clearGameObjects();
         this.clearQuestionScreen();
-        this.cameras.main.setBackgroundColor('#7fcf7a');
+        this.cameras.main.setBackgroundColor('#ffffff');
         const fixedFood = this.getFixedFoodCounts();
         this.blanketFoodCount = 0;
         this.totalFoodToCount = fixedFood.total;
@@ -2036,65 +2022,6 @@ export default class Start extends Phaser.Scene {
         this.addQuestionObject(this.add.circle(x - 55, y, 58, 4037186));
         this.addQuestionObject(this.add.circle(x + 55, y, 58, 4037186));
         this.addQuestionObject(this.add.circle(x, y + 35, 64, 3116856));
-        const fruitPositions = [
-            [
-                -42,
-                -62
-            ],
-            [
-                -12,
-                -78
-            ],
-            [
-                18,
-                -70
-            ],
-            [
-                46,
-                -48
-            ],
-            [
-                -68,
-                -18
-            ],
-            [
-                -35,
-                -10
-            ],
-            [
-                -2,
-                -22
-            ],
-            [
-                32,
-                -8
-            ],
-            [
-                62,
-                6
-            ],
-            [
-                -52,
-                28
-            ],
-            [
-                -18,
-                36
-            ],
-            [
-                16,
-                32
-            ],
-            [
-                48,
-                42
-            ]
-        ];
-        fruitPositions.forEach(position => {
-            const fruit = this.add.circle(x + position[0], y + position[1], 6, 11674146);
-            fruit.setStrokeStyle(1, 0);
-            this.addQuestionObject(fruit);
-        });
     }
     showFloodPreparationQuestion() {
         this.enterRecordedScreen('showFloodPreparationQuestion');
