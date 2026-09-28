@@ -1,6 +1,6 @@
 console.log('MAIN.JS LOADED');
 
-import Start from './scenes/Start.js?v=20260923-principles-update';
+import Start from './scenes/Start.js?v=20260928-neutral-bg-no-fruit';
 
 console.log('START IMPORTED:', Start);
 
