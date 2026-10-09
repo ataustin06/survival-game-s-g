@@ -1364,6 +1364,13 @@ export default class Start extends Phaser.Scene {
             wordWrap: { width: 980 },
             lineSpacing: 6
         }).setOrigin(0.5));
+        this.addQuestionObject(this.add.text(640, 405, 'Choose one of these two options; your earlier arrangement is not an option.', {
+            fontSize: '22px',
+            fontStyle: 'bold',
+            color: '#222222',
+            align: 'center',
+            wordWrap: { width: 980 }
+        }).setOrigin(0.5));
         const answers = Phaser.Utils.Array.Shuffle([
             'The group should divide the food equally among all members.',
             'Each member of the group should keep the food they collected.'
@@ -1579,6 +1586,13 @@ export default class Start extends Phaser.Scene {
             wordWrap: { width: 980 },
             lineSpacing: 8
         }).setOrigin(0.5, 0));
+        this.addQuestionObject(this.add.text(640, 410, 'Choose one of these two options; your earlier arrangement is not an option.', {
+            fontSize: '22px',
+            fontStyle: 'bold',
+            color: '#222222',
+            align: 'center',
+            wordWrap: { width: 980 }
+        }).setOrigin(0.5));
         const answers = Phaser.Utils.Array.Shuffle([
             'The group should redistribute the food so that the greatest possible number of people receive at least 5 pieces.',
             'Each person should keep the food they collected.'
